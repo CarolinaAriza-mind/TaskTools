@@ -65,7 +65,27 @@ export class TasksService {
   async update(id: number, updateTaskDto: UpdateTaskDto) {
     const task = await this.findOne(id);
 
-    Object.assign(task, updateTaskDto);
+    const { parentTaskId, ...taskData } = updateTaskDto;
+
+    Object.assign(task, taskData);
+
+    if (parentTaskId !== undefined) {
+      if (parentTaskId === null) {
+        task.parentTask = undefined;
+      } else {
+        const parent = await this.taskRepository.findOne({
+          where: { id: parentTaskId },
+        });
+        if (!parent) throw new NotFoundException('Parent task not found');
+        task.parentTask = parent;
+      }
+    }
+
+    if (taskData.status === TaskStatus.DONE && !task.completedAt) {
+      task.completedAt = new Date();
+    } else if (taskData.status && taskData.status !== TaskStatus.DONE) {
+      task.completedAt = undefined;
+    }
 
     return this.taskRepository.save(task);
   }
