@@ -1,32 +1,45 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TasksModule } from './tasks/tasks.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+
 @Module({
   imports: [
+    // ---------------- CONFIG ----------------
     ConfigModule.forRoot({
       isGlobal: true,
     }),
 
+    // ---------------- DATABASE ----------------
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('HOST') ?? 'localhost',
-        port: Number(configService.get<string>('DB_PORT')) || 5432,
-        username: configService.get<string>('DB_USERNAME') ?? '',
-        password: configService.get<string>('DB_PASSWORD') ?? '',
-        database: configService.get<string>('DB_NAME') ?? '',
-        autoLoadEntities: true,
-        synchronize: true,
-      }),
+      useFactory: (config: ConfigService) => {
+        const host = config.get<string>('HOST');
+        const port = config.get<number>('DB_PORT');
+        const username = config.get<string>('DB_USERNAME');
+        const password = config.get<string>('DB_PASSWORD');
+        const database = config.get<string>('DB_NAME');
+
+        if (!host || !port || !username || !database) {
+          throw new Error('Missing database environment variables');
+        }
+
+        return {
+          type: 'postgres',
+          host,
+          port,
+          username,
+          password,
+          database,
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+      },
     }),
+
+    // ---------------- FEATURES ----------------
     TasksModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
