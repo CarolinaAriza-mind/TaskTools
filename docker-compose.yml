@@ -1,39 +1,14 @@
+version: "3.8"
+
 services:
   db:
     image: postgres:16
     container_name: tasks_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-<<<<<<< HEAD
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: tasks_db
-    ports:
-      - '5432:5432'
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  api:
-    build: .
-    container_name: tasks_api
-    restart: always
-    ports:
-      - '3000:3000'
-    depends_on:
-      - db
-    environment:
-      PORT: 3000
-      HOST: db
-      DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_NAME: tasks_db
-
-volumes:
-  pgdata:
-=======
-      POSTGRES_PASSWORD: 82714
-      POSTGRES_DB: tasksdb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -41,26 +16,29 @@ volumes:
 
   backend:
     build: ./back-task-tools
+    container_name: tasks_api
+    restart: always
     ports:
-      - "3001:3000"
+      - "3001:3001"
+    env_file:
+      - ./back-task-tools/.env
     depends_on:
       - db
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: 82714
-      DB_NAME: tasksdb
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
 
   frontend:
     build: ./front-task-tools
+    container_name: tasks_front
+    restart: always
     ports:
       - "3000:3000"
     depends_on:
       - backend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:3000
 
 volumes:
   pgdata:
->>>>>>> 42664d1 (fix: remove nested git repo and structure backend/frontend in monorepo)

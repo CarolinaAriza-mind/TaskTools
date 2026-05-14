@@ -2,14 +2,27 @@ import axios from "axios";
 import { Task } from "@/types/task";
 
 const api = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "http://localhost:3001",
 });
 
-export const getTasks = async (): Promise<Task[]> => {
-  const response = await api.get("/tasks");
+export const getTasks = async (
+  page: number,
+  limit: number,
+  status: string,
+): Promise<{
+  data: Task[];
+  total: number;
+}> => {
+  const response = await api.get("/tasks", {
+    params: {
+      page,
+      limit,
+      status,
+    },
+  });
+
   return response.data;
 };
-
 export const createTask = async (task: Partial<Task>) => {
   const response = await api.post("/tasks", task);
   return response.data;

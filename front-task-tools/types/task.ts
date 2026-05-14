@@ -9,10 +9,14 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   estimate?: number;
+
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string;
+
   subtasks?: Task[];
+
+  parentTask?: Task;
 }
 
 export interface TaskMetrics {

@@ -1,179 +1,336 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
-import TaskCard from "@/components/TaskCard";
 import TaskForm from "@/components/TaskForm";
-
-// ✅ NUEVO
 import TaskTree from "@/components/TaskTree";
 
-import { createTask, getTasks } from "@/services/tasks.service";
+import { getTasks } from "@/services/tasks.service";
 
 import { Task } from "@/types/task";
 
-const TASKS_PER_COLUMN = 5;
+const TASKS_PER_PAGE = 5;
 
 export default function HomePage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [todoTasks, setTodoTasks] = useState<Task[]>([]);
+  const [progressTasks, setProgressTasks] = useState<Task[]>([]);
+  const [doneTasks, setDoneTasks] = useState<Task[]>([]);
 
-  const [todoVisible, setTodoVisible] = useState(5);
-  const [progressVisible, setProgressVisible] = useState(5);
-  const [doneVisible, setDoneVisible] = useState(5);
+  const [todoTotal, setTodoTotal] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [doneTotal, setDoneTotal] = useState(0);
 
-  async function loadTasks() {
-    const data = await getTasks();
-    setTasks(data);
-  }
+  const [todoPage, setTodoPage] = useState(1);
+  const [progressPage, setProgressPage] = useState(1);
+  const [donePage, setDonePage] = useState(1);
+
+  // LOAD TASKS
+  const loadTasks = useCallback(async () => {
+    try {
+      const todoRes = await getTasks(todoPage, TASKS_PER_PAGE, "TODO");
+
+      const progressRes = await getTasks(
+        progressPage,
+        TASKS_PER_PAGE,
+        "IN_PROGRESS",
+      );
+
+      const doneRes = await getTasks(donePage, TASKS_PER_PAGE, "DONE");
+
+      setTodoTasks(todoRes.data);
+      setProgressTasks(progressRes.data);
+      setDoneTasks(doneRes.data);
+
+      setTodoTotal(todoRes.total);
+      setProgressTotal(progressRes.total);
+      setDoneTotal(doneRes.total);
+    } catch (error) {
+      console.error("Error loading tasks:", error);
+    }
+  }, [todoPage, progressPage, donePage]);
 
   useEffect(() => {
-    const fetchTasks = async () => {
-      const data = await getTasks();
-      setTasks(data);
-    };
-
-    fetchTasks();
-  }, []);
-
-  const todoTasks = tasks.filter((t) => t.status === "TODO");
-  const progressTasks = tasks.filter((t) => t.status === "IN_PROGRESS");
-  const doneTasks = tasks.filter((t) => t.status === "DONE");
+    loadTasks();
+  }, [loadTasks]);
 
   return (
     <main className="min-h-screen bg-[#0b1120] text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6 md:py-8">
         {/* HEADER */}
-        <div className="mb-10">
-          <h1 className="text-4xl font-bold tracking-tight">Task System</h1>
-          <p className="text-zinc-400 mt-2">Team workload management</p>
+        <div className="mb-8 md:mb-10">
+          <h1
+            className="
+              text-3xl
+              sm:text-4xl
+              font-bold
+              tracking-tight
+            "
+          >
+            Task System
+          </h1>
+
+          <p className="text-zinc-400 mt-2 text-sm sm:text-base">
+            Team workload management
+          </p>
         </div>
 
         {/* CREATE TASK */}
-        <div className="mb-8">
+        <div className="mb-6 md:mb-8">
           <TaskForm onCreated={loadTasks} />
         </div>
 
         {/* BOARD */}
-        <div className="flex gap-6 overflow-x-auto pb-4">
-          {/* TODO COLUMN */}
-          <div className="min-w-[320px] flex-1">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+        <div
+          className="
+            flex
+            flex-col
+            lg:flex-row
+            gap-4
+            md:gap-6
+          "
+        >
+          {/* TODO */}
+          <div className="w-full lg:flex-1">
+            <div
+              className="
+                bg-zinc-900
+                border
+                border-zinc-800
+                rounded-2xl
+                p-4
+                md:p-5
+              "
+            >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-semibold text-lg">TODO</h2>
-                <span className="bg-zinc-800 px-2 py-1 rounded-lg text-sm">
-                  {todoTasks.length}
+                <h2 className="font-semibold text-base md:text-lg">TODO</h2>
+
+                <span
+                  className="
+                    bg-zinc-800
+                    px-2
+                    py-1
+                    rounded-lg
+                    text-xs
+                    md:text-sm
+                  "
+                >
+                  {todoTotal}
                 </span>
               </div>
 
               <div className="space-y-4">
-
-                {/* ✅ CAMBIO: TaskCard → TaskTree */}
                 <TaskTree tasks={todoTasks} refresh={loadTasks} />
 
-                {todoVisible < todoTasks.length && (
+                {/* PAGINATION */}
+                <div className="flex items-center justify-between gap-2 pt-4">
                   <button
-                    onClick={() =>
-                      setTodoVisible(todoVisible + TASKS_PER_COLUMN)
-                    }
+                    disabled={todoPage === 1}
+                    onClick={() => setTodoPage((prev) => prev - 1)}
                     className="
-                      w-full
-                      mt-4
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
                       bg-zinc-800
                       hover:bg-zinc-700
                       transition
-                      rounded-xl
-                      py-3
+                      disabled:opacity-40
                       text-sm
-                      text-zinc-300
                     "
                   >
-                    Load more
+                    Prev
                   </button>
-                )}
+
+                  <span className="text-xs md:text-sm text-zinc-400">
+                    Page {todoPage}
+                  </span>
+
+                  <button
+                    disabled={todoPage * TASKS_PER_PAGE >= todoTotal}
+                    onClick={() => setTodoPage((prev) => prev + 1)}
+                    className="
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
+                      bg-zinc-800
+                      hover:bg-zinc-700
+                      transition
+                      disabled:opacity-40
+                      text-sm
+                    "
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* IN PROGRESS COLUMN */}
-          <div className="min-w-[320px] flex-1">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          {/* IN PROGRESS */}
+          <div className="w-full lg:flex-1">
+            <div
+              className="
+                bg-zinc-900
+                border
+                border-zinc-800
+                rounded-2xl
+                p-4
+                md:p-5
+              "
+            >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-semibold text-lg text-yellow-300">
+                <h2
+                  className="
+                    font-semibold
+                    text-base
+                    md:text-lg
+                    text-yellow-300
+                  "
+                >
                   IN PROGRESS
                 </h2>
 
-                <span className="bg-zinc-800 px-2 py-1 rounded-lg text-sm">
-                  {progressTasks.length}
+                <span
+                  className="
+                    bg-zinc-800
+                    px-2
+                    py-1
+                    rounded-lg
+                    text-xs
+                    md:text-sm
+                  "
+                >
+                  {progressTotal}
                 </span>
               </div>
 
               <div className="space-y-4">
-
-                {/* ✅ CAMBIO: TaskCard → TaskTree */}
                 <TaskTree tasks={progressTasks} refresh={loadTasks} />
 
-                {progressVisible < progressTasks.length && (
+                {/* PAGINATION */}
+                <div className="flex items-center justify-between gap-2 pt-4">
                   <button
-                    onClick={() =>
-                      setProgressVisible(progressVisible + TASKS_PER_COLUMN)
-                    }
+                    disabled={progressPage === 1}
+                    onClick={() => setProgressPage((prev) => prev - 1)}
                     className="
-                      w-full
-                      mt-4
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
                       bg-zinc-800
                       hover:bg-zinc-700
                       transition
-                      rounded-xl
-                      py-3
+                      disabled:opacity-40
                       text-sm
-                      text-zinc-300
                     "
                   >
-                    Load more
+                    Prev
                   </button>
-                )}
+
+                  <span className="text-xs md:text-sm text-zinc-400">
+                    Page {progressPage}
+                  </span>
+
+                  <button
+                    disabled={progressPage * TASKS_PER_PAGE >= progressTotal}
+                    onClick={() => setProgressPage((prev) => prev + 1)}
+                    className="
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
+                      bg-zinc-800
+                      hover:bg-zinc-700
+                      transition
+                      disabled:opacity-40
+                      text-sm
+                    "
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* DONE COLUMN */}
-          <div className="min-w-[320px] flex-1">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          {/* DONE */}
+          <div className="w-full lg:flex-1">
+            <div
+              className="
+                bg-zinc-900
+                border
+                border-zinc-800
+                rounded-2xl
+                p-4
+                md:p-5
+              "
+            >
               <div className="flex items-center justify-between mb-5">
-                <h2 className="font-semibold text-lg text-emerald-300">
+                <h2
+                  className="
+                    font-semibold
+                    text-base
+                    md:text-lg
+                    text-emerald-300
+                  "
+                >
                   DONE
                 </h2>
 
-                <span className="bg-zinc-800 px-2 py-1 rounded-lg text-sm">
-                  {doneTasks.length}
+                <span
+                  className="
+                    bg-zinc-800
+                    px-2
+                    py-1
+                    rounded-lg
+                    text-xs
+                    md:text-sm
+                  "
+                >
+                  {doneTotal}
                 </span>
               </div>
 
               <div className="space-y-4">
-
-                {/* ✅ CAMBIO: TaskCard → TaskTree */}
                 <TaskTree tasks={doneTasks} refresh={loadTasks} />
 
-                {doneVisible < doneTasks.length && (
+                {/* PAGINATION */}
+                <div className="flex items-center justify-between gap-2 pt-4">
                   <button
-                    onClick={() =>
-                      setDoneVisible(doneVisible + TASKS_PER_COLUMN)
-                    }
+                    disabled={donePage === 1}
+                    onClick={() => setDonePage((prev) => prev - 1)}
                     className="
-                      w-full
-                      mt-4
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
                       bg-zinc-800
                       hover:bg-zinc-700
                       transition
-                      rounded-xl
-                      py-3
+                      disabled:opacity-40
                       text-sm
-                      text-zinc-300
                     "
                   >
-                    Load more
+                    Prev
                   </button>
-                )}
+
+                  <span className="text-xs md:text-sm text-zinc-400">
+                    Page {donePage}
+                  </span>
+
+                  <button
+                    disabled={donePage * TASKS_PER_PAGE >= doneTotal}
+                    onClick={() => setDonePage((prev) => prev + 1)}
+                    className="
+                      px-3 md:px-4
+                      py-2
+                      rounded-xl
+                      bg-zinc-800
+                      hover:bg-zinc-700
+                      transition
+                      disabled:opacity-40
+                      text-sm
+                    "
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
