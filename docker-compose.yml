@@ -5,6 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
+<<<<<<< HEAD
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: tasks_db
     ports:
@@ -30,3 +31,36 @@ services:
 
 volumes:
   pgdata:
+=======
+      POSTGRES_PASSWORD: 82714
+      POSTGRES_DB: tasksdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./back-task-tools
+    ports:
+      - "3001:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: 82714
+      DB_NAME: tasksdb
+
+  frontend:
+    build: ./front-task-tools
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3000
+
+volumes:
+  pgdata:
+>>>>>>> 42664d1 (fix: remove nested git repo and structure backend/frontend in monorepo)
